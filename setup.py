@@ -1,8 +1,7 @@
 from setuptools import setup, find_packages
 import os
 
-import os
-long_description = 'Twitter Tap is a python tool that connects to the Twitter API and issues calls to the search or the streaming endpoint using a query that the user has entered.'
+long_description = 'Twitter Tap Timeframe is a python tool that connects to the Twitter API and issues calls to the search or the streaming endpoint using a query that the user has entered. It also stores tweets into TimeFrames.'
 if os.path.exists('README.rst'):
     long_description = open('README.md').read()
 
@@ -17,14 +16,14 @@ CLASSIFIERS = [
 ]
 
 dist = setup(
-    name='twitter-tap',
-    version='2.0.3',
-    author='Janez Kranjc',
-    description='Collect tweets to a mongoDB using either the Twitter search API or the streaming API.',
+    name='twitter-tap-timeframe',
+    version='0.1',
+    author='Javi Palanca',
+    description='Collect tweets to a mongoDB using either the Twitter search API or the streaming API. Stores tweets into timeframes',
     long_description=long_description,
-    author_email='janez.kranjc@gmail.com',
-    url='http://janezkranjc.github.io/twitter-tap/',
-    license = 'MIT',
+    author_email='jpalanca@gmail.com',
+    url='https://github.com/javipalanca/twitter-tap-timeframe',
+    license='MIT',
     install_requires=['pymongo','twython','six'],
     classifiers=CLASSIFIERS,
     packages=find_packages(),
@@ -32,7 +31,7 @@ dist = setup(
     zip_safe=False,
     entry_points={
         'console_scripts': [
-         'tap = twitter_tap.tap:main',
+         'tap-timeframe = twitter_tap_timeframe.tap:main',
         ],
     }
 )
