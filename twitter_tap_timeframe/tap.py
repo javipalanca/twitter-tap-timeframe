@@ -231,19 +231,35 @@ def main():
                     continue
                 return results
 
+        def extract_mini_tweet(status):
+            d = {"id": status["id"], "user": status["user"]["screen_name"], "text": status["text"]}
+            try:
+                d["geo"] = status["geo"]
+            except:
+                pass
+            try:
+                d["place"] = status["place"]
+            except:
+                pass
+            return d
+
         def insert_in_timeframe(status):
+            PAGE_SIZE = 50000
             dt = status['created_at']
-            mini_tweet = {"id": status["id"], "user": status["user"]["screen_name"], "text": status["text"]}
+            mini_tweet = extract_mini_tweet(status)
+
+            # first fill existing pages
             try:
-                mini_tweet["geo"] = status["geo"]
+                tf = timeframes.find_one({"year": dt.year, "month": dt.month, "day": dt.day, "hour": dt.hour,
+                                          "tweets": {"$exists": True},
+                                          "$where": "this.tweets.length<{0}".format(PAGE_SIZE)})
+
+                tf["tweets"] = tf["tweets"] + [mini_tweet]
+                timeframes.save(tf)
             except:
-                pass
-            try:
-                mini_tweet["place"] = status["place"]
-            except:
-                pass
-            timeframes.update({"year": dt.year, "month": dt.month, "day": dt.day, "hour": dt.hour},
-                              {"$push": {"tweets": mini_tweet}}, upsert=True)
+                # then create pages if needed
+                timeframes.save({"year": dt.year, "month": dt.month, "day": dt.day, "hour": dt.hour,
+                                 "tweets": [mini_tweet]})
 
         def save_tweets(statuses, current_since_id):
             for status in statuses:
