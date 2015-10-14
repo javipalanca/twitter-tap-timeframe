@@ -6,6 +6,8 @@ import sys
 import argparse
 from time import sleep
 import signal
+import requests
+import json
 import six
 
 if six.PY2:
@@ -101,6 +103,16 @@ def main():
                                choices=["DEBUG", "INFO", "WARN", "ERROR", "CRITICAL", "FATAL"],
                                help='The level of verbosity.')
 
+    # callback arguments
+    parser_search.add_argument('-cb', '--callback-url', '--callback_url', type=six.text_type, dest='callback_url',
+                               help="The url where you want to send the tweet")
+    parser_search.add_argument('-cbl', '--callback-login', '--callback_login', type=six.text_type, dest='callback_login',
+                               help="The url where you login for the callback")
+    parser_search.add_argument('-cbu', '--callback-user', '--callback_user', type=six.text_type, dest='callback_user',
+                               help="The user for the callback")
+    parser_search.add_argument('-cbp', '--callback-password', '--callback_password', type=six.text_type, dest='callback_password',
+                               help="The password for the callback")
+
     parser_stream = subparsers.add_parser('stream',
                                           help='Obtain tweets using the streaming API. If you do not provide any arguments, the sample stream will be tracked. For a personalized stream at least one of the following must be entered: follow, track, or locations. The default access level allows up to 400 track keywords, 5,000 follow userids and 25 0.1-360 degree location boxes.')
 
@@ -164,6 +176,11 @@ def main():
         waittime = args.waittime
         clean_since_id = args.clean
         result_type = args.result_type
+
+        callback_url = args.callback_url
+        callback_login = args.callback_login
+        callback_user = args.callback_user
+        callback_password = args.callback_password
 
         CONSUMER_KEY = args.consumer_key
         CONSUMER_SECRET = args.consumer_secret
@@ -261,6 +278,36 @@ def main():
                 timeframes.save({"year": dt.year, "month": dt.month, "day": dt.day, "hour": dt.hour,
                                  "tweets": [mini_tweet]})
 
+        def callback_tweet(status):
+            if not callback_url:
+                return
+            session = requests.session()
+            post_data = dict(tweet=json.dumps(status))
+            if callback_login:
+                session.get(callback_login)  # sets cookie
+                csrftoken = session.cookies['csrftoken']
+                login_data = dict(username=callback_user, password=callback_password, csrfmiddlewaretoken=csrftoken)
+                r = session.post(callback_login, login_data)
+                post_data["username"] = callback_user
+                post_data["password"] = callback_password
+                post_data["csrfmiddlewaretoken"] = csrftoken
+                if r.ok:
+                    logger.info("Callback login successful")
+                    r = session.post(callback_url, data=post_data)
+                    if r.ok:
+                        logger.info("Tweet sent to callback")
+                    else:
+                        logger.error("Callback failed")
+                else:
+                    logger.error("Callback login failed")
+            else:
+                r = session.post(callback_url, data=post_data)
+                if r.ok:
+                    logger.info("Tweet sent to callback")
+                else:
+                    logger.error("Callback failed")
+
+
         def save_tweets(statuses, current_since_id):
             for status in statuses:
                 status['created_at'] = parse_datetime(status['created_at'])
@@ -275,6 +322,8 @@ def main():
                 current_id = longtype(status['id'])
                 if current_id > current_since_id:
                     current_since_id = current_id
+
+                callback_tweet(status)
 
             if len(statuses) == 0:
                 logger.debug("No new tweets. Taking a break for 10 seconds...")
