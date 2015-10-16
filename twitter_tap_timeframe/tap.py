@@ -6,7 +6,6 @@ import sys
 import argparse
 from time import sleep
 import signal
-from bson import json_util
 import requests
 import json
 import six
@@ -279,11 +278,22 @@ def main():
                 timeframes.save({"year": dt.year, "month": dt.month, "day": dt.day, "hour": dt.hour,
                                  "tweets": [mini_tweet]})
 
+        class DateTimeEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, datetime.datetime):
+                    return obj.isoformat()
+                elif isinstance(obj, datetime.date):
+                    return obj.isoformat()
+                elif isinstance(obj, datetime.timedelta):
+                    return (datetime.datetime.min + obj).time().isoformat()
+                else:
+                    return super(DateTimeEncoder, self).default(obj)
+
         def callback_tweet(status):
             if not callback_url:
                 return
             session = requests.session()
-            post_data = dict(tweet=json.dumps(status, default=json_util.default))
+            post_data = dict(tweet=json.dumps(status, cls=DateTimeEncoder))
             if callback_login:
                 session.get(callback_login)  # sets cookie
                 csrftoken = session.cookies['csrftoken']
