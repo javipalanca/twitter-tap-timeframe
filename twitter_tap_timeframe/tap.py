@@ -6,6 +6,7 @@ import sys
 import argparse
 from time import sleep
 import signal
+from bson import json_util
 import requests
 import json
 import six
@@ -282,7 +283,7 @@ def main():
             if not callback_url:
                 return
             session = requests.session()
-            post_data = dict(tweet=json.dumps(status))
+            post_data = dict(tweet=json.dumps(status, default=json_util.default))
             if callback_login:
                 session.get(callback_login)  # sets cookie
                 csrftoken = session.cookies['csrftoken']
@@ -306,7 +307,6 @@ def main():
                     logger.info("Tweet sent to callback")
                 else:
                     logger.error("Callback failed")
-
 
         def save_tweets(statuses, current_since_id):
             for status in statuses:
