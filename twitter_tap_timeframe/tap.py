@@ -9,6 +9,8 @@ import signal
 import requests
 import json
 import six
+import datetime
+from email.utils import parsedate
 
 if six.PY2:
     import urlparse
@@ -18,8 +20,6 @@ if six.PY3:
     import urllib.parse as urlparse
 
     longtype = six.integer_types[0]
-from datetime import datetime
-from email.utils import parsedate
 
 
 def main():
@@ -36,7 +36,7 @@ def main():
         sys.exit(1)
 
     def parse_datetime(string):
-        return datetime(*(parsedate(string)[:6]))
+        return datetime.datetime(*(parsedate(string)[:6]))
 
     logging_dict = {
         "DEBUG": logging.DEBUG,
