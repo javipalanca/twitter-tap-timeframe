@@ -292,31 +292,38 @@ def main():
         def callback_tweet(status):
             if not callback_url:
                 return
-            session = requests.session()
-            post_data = dict(tweet=json.dumps(status, cls=DateTimeEncoder))
-            if callback_login:
-                session.get(callback_login)  # sets cookie
-                csrftoken = session.cookies['csrftoken']
-                login_data = dict(username=callback_user, password=callback_password, csrfmiddlewaretoken=csrftoken)
-                r = session.post(callback_login, login_data)
-                post_data["username"] = callback_user
-                post_data["password"] = callback_password
-                post_data["csrfmiddlewaretoken"] = csrftoken
-                if r.ok:
-                    logger.info("Callback login successful")
+            try:
+                session = requests.session()
+                post_data = dict(tweet=json.dumps(status, cls=DateTimeEncoder))
+                if callback_login:
+                    session.get(callback_login)  # sets cookie
+                    csrftoken = session.cookies['csrftoken']
+                    login_data = dict(username=callback_user, password=callback_password, csrfmiddlewaretoken=csrftoken)
+                    r = session.post(callback_login, login_data)
+                    post_data["username"] = callback_user
+                    post_data["password"] = callback_password
+                    post_data["csrfmiddlewaretoken"] = csrftoken
+                    if r.ok:
+                        logger.info("Callback login successful.")
+                        r = session.post(callback_url, data=post_data)
+                        if r.ok:
+                            logger.info("Tweet sent to callback.")
+                        else:
+                            logger.error("Callback failed. Could not send tweet.")
+                    else:
+                        logger.error("Callback login failed.")
+                else:
                     r = session.post(callback_url, data=post_data)
                     if r.ok:
-                        logger.info("Tweet sent to callback")
+                        logger.info("Tweet sent to callback.")
                     else:
-                        logger.error("Callback failed")
-                else:
-                    logger.error("Callback login failed")
-            else:
-                r = session.post(callback_url, data=post_data)
-                if r.ok:
-                    logger.info("Tweet sent to callback")
-                else:
-                    logger.error("Callback failed")
+                        logger.error("Callback failed. Could not send tweet.")
+            except requests.exceptions.ConnectionError as e:
+                logger.error("Connection error exception: ", e)
+            except requests.exceptions.ConnectTimeout as e:
+                logger.error("Connect timeout exception: ", e)
+            except requests.exceptions.RequestException as e:
+                logger.error("Exception in callback: ", e)
 
         def save_tweets(statuses, current_since_id):
             for status in statuses:
